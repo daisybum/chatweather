@@ -81,7 +81,7 @@ def forecast(params):
         return f"알 수 없는 오류 발생: {e}"
 
 # API 키
-keys = '8P+eTTXMiGSkeNVFYTOzdF3zWbKpj+h94FRAelUy7gc0QcljhdhbzdJd9mumrZK6YATlXcuiGpK4OS+sd3E9SQ=='
+keys = '...'
 
 # 좌표 (서울의 경우)
 params = {
