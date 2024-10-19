@@ -3,7 +3,7 @@ import re
 from datetime import datetime, timedelta
 from pyWeather.weather import forecast, get_current_date, get_current_hour
 
-# OpenAI API 키 설정
+# OpenAI API 키 설정 (GPT-4.0-mini 모델을 사용)
 openai.api_key = "your_openai_api_key"
 
 
@@ -30,12 +30,12 @@ def extract_city_and_date(query):
     return city, target_date
 
 
-def query_gpt3(query):
+def query_gpt4_mini(query):
     """
-    GPT-3.5 API를 호출하여 자연어 응답을 생성하는 함수.
+    GPT-4.0-mini API를 호출하여 자연어 응답을 생성하는 함수.
     """
     response = openai.Completion.create(
-        engine="gpt-3.5-turbo",
+        engine="gpt-4.0-mini",  # GPT-4.0-mini 모델 사용
         prompt=query,
         max_tokens=100,
         n=1,
@@ -67,17 +67,17 @@ def generate_weather_response(query):
     # 날씨 정보를 가져옴
     temp, sky = forecast(params)
 
-    # GPT-3.5로 자연스러운 응답 생성
+    # GPT-4.0-mini로 자연스러운 응답 생성
     weather_info = f"{city}의 {target_date} 날씨는 {sky}이고, 기온은 {temp}도입니다."
     prompt = f"사용자에게 다음 정보에 대해 설명해줘: {weather_info}. "
 
-    gpt_response = query_gpt3(prompt)
+    gpt_response = query_gpt4_mini(prompt)
     return gpt_response
 
 
 def query(query_text):
     """
-    사용자의 질의에 대해 GPT-3.5와 날씨 API를 사용해 응답하는 함수.
+    사용자의 질의에 대해 GPT-4.0-mini와 날씨 API를 사용해 응답하는 함수.
     """
     # 사용자의 질의에서 정보를 추출하고 응답 생성
     return generate_weather_response(query_text)
