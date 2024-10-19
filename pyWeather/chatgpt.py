@@ -1,11 +1,11 @@
 import openai
 import re
 from datetime import datetime, timedelta
+from config import get_openai_api_key, get_weather_api_key
 from pyWeather.weather import forecast, get_current_date, get_current_hour
 
-# OpenAI API 키 설정 (GPT-4.0-mini 모델을 사용)
-openai.api_key = "your_openai_api_key"
-
+# OpenAI API 키 설정 (단독 기본 API 키 사용)
+openai.api_key = get_openai_api_key()
 
 def extract_city_and_date(query):
     """
@@ -54,7 +54,7 @@ def generate_weather_response(query):
 
     # 날씨 API 호출을 위한 파라미터 설정
     params = {
-        'serviceKey': 'your_weather_api_key',  # 기상청 또는 날씨 API 키
+        'serviceKey': get_weather_api_key(),  # 기상청 또는 날씨 API 키
         'pageNo': '1',
         'numOfRows': '10',
         'dataType': 'XML',
