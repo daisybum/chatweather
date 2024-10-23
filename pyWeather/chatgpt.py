@@ -1,48 +1,82 @@
+import json
+
 import openai
-import re
-from datetime import datetime, timedelta
 from config import get_openai_api_key, get_weather_api_key
-from pyWeather.weather import forecast, get_current_date, get_current_hour
+from pyWeather.weather import forecast
+from pyWeather.weather_api_datetime import get_current_datetime
 
 # OpenAI API 키 설정 (단독 기본 API 키 사용)
 openai.api_key = get_openai_api_key()
 
+
 def extract_city_and_date(query):
     """
-    사용자 질의에서 도시와 날짜를 추출하는 함수.
+    Uses GPT-4.0-mini to infer the city and date from the user's query.
     """
-    # 날짜 패턴 매칭 (오늘, 내일, 모레 등)
-    date_match = re.search(r"(오늘|내일|모레)", query)
-    date_str = date_match.group(1) if date_match else None
+    # Prompt GPT to extract city and date
+    prompt = f"""
+사용자의 질의에서 도시(영어명)와 날짜를 추출해주세요. 현재 시간, %Y%m%d은 {get_current_datetime()}입니다.
 
-    # 도시 이름 추출 (간단한 패턴 예시)
-    city_match = re.search(r"(서울|부산|대구|인천|광주|대전|울산|하와이|뉴욕|런던|파리)", query)
-    city = city_match.group(1) if city_match else "서울"  # 도시가 없으면 기본값으로 서울 설정
+질의: "{query}"
 
-    # 날짜 계산
-    if date_str == "내일":
-        target_date = (datetime.now() + timedelta(days=1)).strftime("%Y%m%d")
-    elif date_str == "모레":
-        target_date = (datetime.now() + timedelta(days=2)).strftime("%Y%m%d")
-    else:
-        target_date = get_current_date()
+요구사항:
+- 'city': 질의에서 언급된 도시 이름을 추출한 후, 영어로 반환하세요. 언급되지 않았다면 기본값으로 'seoul'을 사용하세요.
+- 도시 이름의 첫 글짜는 대문자로 변환하고 여러 단어로 이루어진 경우 각 단어의 첫 글자를 대문자로 변환하세요. 그리고 띄어쓰기를 하세요.
+- 'date': 질의에서 언급된 날짜를 'YYYYMMDDHHMMSS' 형식으로 변환하여 추출하세요. '오늘', '내일', '모레'와 같은 상대적 날짜도 변환하세요. 언급되지 않았다면 오늘 날짜를 사용하세요.
+- 만약 date의 시간을 특정하지 않는 경우 12시 정각으로 설정해주세요.
+- JSON 형식으로 출력하되 '''{{...}}''' 형태로 출력해주세요.
 
-    return city, target_date
+결과는 다음 JSON 형식으로 제공해주세요:
+{{
+  "city": "도시 이름(영어명)",
+  "date": "YYYYMMDDHHMMSS"
+}}
+"""
 
-
-def query_gpt4_mini(query):
-    """
-    GPT-4.0-mini API를 호출하여 자연어 응답을 생성하는 함수.
-    """
-    response = openai.Completion.create(
-        engine="gpt-4.0-mini",  # GPT-4.0-mini 모델 사용
-        prompt=query,
-        max_tokens=100,
+    response = openai.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "도시와 날짜 추출"},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=150,
         n=1,
         stop=None,
         temperature=0.7,
     )
-    return response.choices[0].text.strip()
+
+    output = response.choices[0].message.content.strip()
+    output = '{' + output.split('{')[-1].split('}')[0] + '}'
+
+    # JSON 파싱
+    try:
+        data = json.loads(output)
+        city = data.get('city', 'seoul')
+        date_str = data.get('date', get_current_datetime())
+    except json.JSONDecodeError:
+        # 파싱 실패 시 기본값 사용
+        city = 'seoul'
+        date_str = get_current_datetime()
+
+    return city, date_str
+
+
+def query_gpt4_mini(prompt):
+    """
+    GPT-4.0-mini API를 호출하여 자연어 응답을 생성하는 함수.
+    """
+    response = openai.chat.completions.create(
+        model="gpt-4o-mini",  # GPT-4.0-mini 모델 사용
+        messages=[
+            {"role": "system", "content": "날씨 정보 생성"},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=200,
+        n=1,
+        stop=None,
+        temperature=0.7,
+    )
+    return response.choices[0].message.content.strip()
 
 
 def generate_weather_response(query):
@@ -52,23 +86,19 @@ def generate_weather_response(query):
     # 질의에서 도시와 날짜 추출
     city, target_date = extract_city_and_date(query)
 
-    # 날씨 API 호출을 위한 파라미터 설정
     params = {
-        'serviceKey': get_weather_api_key(),  # 기상청 또는 날씨 API 키
-        'pageNo': '1',
-        'numOfRows': '10',
-        'dataType': 'XML',
-        'base_date': target_date,
-        'base_time': get_current_hour(),
-        'nx': '55',  # 서울의 경우, 필요에 따라 좌표 매핑을 추가
-        'ny': '127'
+        'city': city,
+        'serviceKey': get_weather_api_key(),
+        "target_date": target_date,
+        "lang": 'kr',  # 한국어 설정,
+        "units": 'metric',  # 섭씨로 변경
     }
 
     # 날씨 정보를 가져옴
-    temp, sky = forecast(params)
+    temp, sky, date_time = forecast(params)
 
     # GPT-4.0-mini로 자연스러운 응답 생성
-    weather_info = f"{city}의 {target_date} 날씨는 {sky}이고, 기온은 {temp}도입니다."
+    weather_info = f"{city}의 {date_time} 날씨는 {sky}이고, 기온은 {temp}도입니다."
     prompt = f"사용자에게 다음 정보에 대해 설명해줘: {weather_info}. "
 
     gpt_response = query_gpt4_mini(prompt)
