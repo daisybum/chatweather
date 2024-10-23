@@ -80,4 +80,3 @@ def forecast(params):
         except Exception as e:
             # 요청이 실패했을 때 처리
             print(f"Error fetching weather data: {e}")
-
