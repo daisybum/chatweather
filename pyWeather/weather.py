@@ -1,98 +1,83 @@
 import requests
-from datetime import datetime, timedelta
-import xmltodict
-
-def get_current_date():
-    current_date = datetime.now().date()
-    return current_date.strftime("%Y%m%d")
-
-def get_current_hour():
-    now = datetime.now()
-    # 기상청 초단기예보는 10분 단위로 제공되므로 45분 전의 데이터를 요청합니다.
-    if now.minute < 45:
-        now -= timedelta(hours=1)
-    return now.strftime("%H00")  # 'hh00' 형식으로 반환
-
-int_to_weather = {
-    "0": "맑음",
-    "1": "비",
-    "2": "비/눈",
-    "3": "눈",
-    "5": "빗방울",
-    "6": "빗방울눈날림",
-    "7": "눈날림"
-}
+import json
+from datetime import datetime
+from pyWeather.weather_api_datetime import get_current_datetime, set_api_datetime
 
 
 def forecast(params):
     """
-    초단기예보 API를 호출하여 현재 기온과 날씨 상태를 반환합니다.
+    날씨 정보를 가져오는 함수.
+    주어진 파라미터로 API 요청을 보내고, 날씨와 온도 정보를 반환합니다.
     """
-    url = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst'
-    try:
-        # 값 요청 (웹 브라우저 서버에서 요청 - url주소와 파라미터)
-        res = requests.get(url, params)
-        res.raise_for_status()  # API 호출 에러 처리
+    city = params.get('city', 'Seoul')  # 기본값은 서울
+    apiKey = params.get('serviceKey')  # API 키
+    lang = params.get('lang', 'kr')  # 언어 설정
+    units = params.get('units', 'metric')  # 단위 설정
 
-        # XML -> 딕셔너리로 변환
-        xml_data = res.text
-        dict_data = xmltodict.parse(xml_data)
+    # 기상 예보 API에서 사용할 날짜와 시간 설정
+    target_date = params.get('target_date')
+    target_date = datetime.strptime(target_date, "%Y%m%d%H%M%S")
+    api_datetime = set_api_datetime(target_date)
+    datetime_str = api_datetime.strftime("%Y-%m-%d %H:%M:%S")
 
-        # API 키가 등록되지 않은 경우 확인
-        if 'cmmMsgHeader' in dict_data.get('OpenAPI_ServiceResponse', {}):
-            error_msg = dict_data['OpenAPI_ServiceResponse']['cmmMsgHeader'].get('returnAuthMsg', '')
-            if error_msg == 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR':
-                return "API 키가 등록되지 않았거나 올바르지 않습니다."
+    # OpenWeatherMap API 호출
+    today = datetime.now().date()
 
-        # 응답 데이터에서 필요한 키가 존재하는지 확인
-        if 'response' not in dict_data:
-            return "API 응답에서 'response' 키를 찾을 수 없습니다."
+    # 오늘 날짜인 경우 현재 날씨 정보를 가져옴
+    if today == target_date.date():
+        api = f"https://api.openweathermap.org/data/2.5/weather?q={city}&APPID={apiKey}&lang={lang}&units={units}"
+        try:
+            # API 요청 보내기
+            result = requests.get(api)
 
-        if 'body' not in dict_data['response']:
-            return "API 응답에서 'body' 키를 찾을 수 없습니다."
+            # HTTP 응답 코드 확인
+            if result.status_code == 200:
+                weather_data = json.loads(result.text)
 
-        if 'items' not in dict_data['response']['body']:
-            return "API 응답에서 'items' 키를 찾을 수 없습니다."
+                # 기온과 날씨 상태 반환
+                temp = weather_data['main']['temp']
+                sky = weather_data['weather'][0]['description']
+                return temp, sky, get_current_datetime()
+            elif result.status_code == 404:
+                print(f"Error: The city '{city}' was not found.")
+            elif result.status_code == 401:
+                print(f"Error: Invalid API key.")
+            else:
+                print(f"Error: Received unexpected response code {result.status_code}.")
 
-        # 데이터가 존재하는지 확인
-        if 'item' not in dict_data['response']['body']['items']:
-            return "API 응답에서 'item' 데이터를 찾을 수 없습니다."
+        except Exception as e:
+            # 요청이 실패했을 때 처리
+            print(f"Error fetching weather data: {e}")
 
-        temp, sky = None, None
-        # 필요한 데이터 추출
-        for item in dict_data['response']['body']['items']['item']:
-            if item['category'] == 'T1H':
-                temp = item['obsrValue']
-            if item['category'] == 'PTY':
-                sky = int_to_weather.get(item['obsrValue'], "알 수 없음")
+        return None, None
+    else:
+        api = f"https://api.openweathermap.org/data/2.5/forecast?q={city}&APPID={apiKey}&lang={lang}&units={units}"
+        try:
+            # API 요청 보내기
+            result = requests.get(api)
 
-        if temp and sky:
-            return temp, sky
-        else:
-            return "필요한 정보를 가져오지 못했습니다."
+            # HTTP 응답 코드 확인
+            if result.status_code == 200:
+                weather_data = json.loads(result.text)
 
-    except requests.exceptions.RequestException as e:
-        return f"API 요청 실패: {e}"
+                #
+                weather_list = weather_data['list']
+                for item in weather_list:
+                    # API에서 가져온 시간과 가장 가까운 시간을 찾음
+                    item_datetime = datetime.fromtimestamp(item['dt'])
+                    if item_datetime == api_datetime:
+                        temp = item['main']['temp']
+                        sky = item['weather'][0]['description']
+                        return temp, sky, api_datetime
 
-    except KeyError as e:
-        return f"예상치 못한 응답 구조입니다. 누락된 키: {e}"
+            elif result.status_code == 404:
+                print(f"Error: The city '{city}' was not found.")
+            elif result.status_code == 401:
+                print(f"Error: Invalid API key.")
+            else:
+                print(f"Error: Received unexpected response code {result.status_code}.")
 
-    except Exception as e:
-        return f"알 수 없는 오류 발생: {e}"
+        except Exception as e:
+            # 요청이 실패했을 때 처리
+            print(f"Error fetching weather data: {e}")
 
-# API 키
-keys = '...'
-
-# 좌표 (서울의 경우)
-params = {
-    'serviceKey': keys,
-    'pageNo': '1',
-    'numOfRows': '10',
-    'dataType': 'XML',
-    'base_date': get_current_date(),
-    'base_time': get_current_hour(),
-    'nx': '55',  # 예: 서울
-    'ny': '127'
-}
-
-print(forecast(params))
