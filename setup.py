@@ -27,5 +27,6 @@ setup(
         "requests",
         "xmltodict",
         "openai",
+        "pytest"
     ],
 )
