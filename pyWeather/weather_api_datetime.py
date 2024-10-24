@@ -2,8 +2,7 @@ from datetime import datetime, timedelta
 
 
 def get_current_datetime():
-    current_date = datetime.now()
-    return current_date.strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now()
 
 
 def set_api_datetime(date_time):

@@ -41,7 +41,7 @@ def forecast(params):
         return None, None, None
 
     api_datetime = set_api_datetime(target_date)
-    today = datetime.now().date()
+    today = get_current_datetime().date()
 
     try:
         if today == target_date.date():
