@@ -1,91 +1,103 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import patch
 from pyWeather.chatbot import (
     make_extracting_prompt,
-    call_openai_api,
     extract_city_and_date,
     generate_weather_info,
     generate_weather_response,
-    query
+    chat_loop,
 )
+from datetime import datetime
 
-def test_make_extracting_prompt(monkeypatch):
-    # get_current_datetime 함수를 모의로 설정
-    monkeypatch.setattr('pyWeather.chatbot.get_current_datetime', lambda: '20231024120000')
-    query = "내일 뉴욕 날씨 어때?"
+
+@pytest.fixture
+def mock_get_current_datetime():
+    with patch('pyWeather.chatbot.get_current_datetime') as mock_datetime:
+        mock_datetime.return_value = datetime(2023, 10, 27, 12, 0, 0)
+        yield mock_datetime
+
+
+@pytest.fixture
+def mock_call_openai_api():
+    with patch('pyWeather.chatbot.call_openai_api') as mock_api:
+        yield mock_api
+
+
+@pytest.fixture
+def mock_forecast():
+    with patch('pyWeather.chatbot.forecast') as mock_forecast:
+        yield mock_forecast
+
+
+def test_make_extracting_prompt():
+    query = "오늘 서울 날씨 어때?"
     prompt = make_extracting_prompt(query)
-    # 프롬프트에 질의와 현재 시간이 포함되어 있는지 확인
+    assert "사용자의 질의에서 도시(영어명)와 날짜를 추출해주세요." in prompt
     assert f'질의: "{query}"' in prompt
-    assert "현재 시간은 20231024120000입니다." in prompt
 
-def test_call_openai_api(monkeypatch):
-    # OpenAI API 응답을 모의로 설정
-    mock_response = MagicMock()
-    mock_response.choices = [MagicMock()]
-    mock_response.choices[0].message.content = '테스트 응답 내용'
 
-    def mock_create(*args, **kwargs):
-        return mock_response
+def test_extract_city_and_date(mock_get_current_datetime, mock_call_openai_api):
+    mock_call_openai_api.return_value = '{"city": "Seoul", "date": "20231027120000"}'
+    city, date_str = extract_city_and_date("오늘 서울 날씨 어때?")
+    assert city == "Seoul"
+    assert date_str == "20231027120000"
 
-    monkeypatch.setattr('openai.ChatCompletion.create', mock_create)
 
-    prompt = "테스트 프롬프트"
-    system_content = "테스트 시스템 컨텐츠"
-    response = call_openai_api(prompt, system_content)
-    assert response == '테스트 응답 내용'
-
-def test_extract_city_and_date(monkeypatch):
-    # get_current_datetime과 call_openai_api 함수를 모의로 설정
-    monkeypatch.setattr('pyWeather.chatbot.get_current_datetime', lambda: '20231024120000')
-
-    def mock_call_openai_api(prompt, system_content, max_tokens=150, temperature=0.7):
-        return '''
-        {
-          "city": "New York",
-          "date": "20231025120000"
-        }
-        '''
-
-    monkeypatch.setattr('pyWeather.chatbot.call_openai_api', mock_call_openai_api)
-
-    query = "내일 뉴욕 날씨 어때?"
-    city, date_str = extract_city_and_date(query)
-    assert city == "New York"
-    assert date_str == "20231025120000"
-
-def test_generate_weather_info(monkeypatch):
-    # forecast 함수를 모의로 설정
-    def mock_forecast(params):
-        return 20.0, '맑음', '2023-10-25 12:00:00'
-
-    monkeypatch.setattr('pyWeather.chatbot.forecast', mock_forecast)
-
-    city = 'New York'
-    target_date = '20231025120000'
-    temp, sky, date_time = generate_weather_info(city, target_date)
+def test_generate_weather_info(mock_forecast):
+    mock_forecast.return_value = (20.0, "맑음", "2023-10-27 12:00:00")
+    temp, sky, date_time = generate_weather_info("Seoul", "20231027120000")
     assert temp == 20.0
-    assert sky == '맑음'
-    assert date_time == '2023-10-25 12:00:00'
+    assert sky == "맑음"
+    assert date_time == "2023-10-27 12:00:00"
 
-def test_generate_weather_response(monkeypatch):
-    # 함수들의 반환 값을 모의로 설정
-    monkeypatch.setattr('pyWeather.chatbot.extract_city_and_date', lambda query: ('New York', '20231025120000'))
-    monkeypatch.setattr('pyWeather.chatbot.generate_weather_info', lambda city, date: (20.0, '맑음', '2023-10-25 12:00:00'))
 
-    def mock_call_openai_api(prompt, system_content, max_tokens=200, temperature=0.7):
-        return '뉴욕의 10월 25일 날씨는 맑음이며, 기온은 20도입니다.'
+def test_generate_weather_response(mock_call_openai_api):
+    conversation_history = []
+    mock_call_openai_api.return_value = "오늘 서울은 맑고 기온은 20도입니다. 즐거운 하루 보내세요!"
 
-    monkeypatch.setattr('pyWeather.chatbot.call_openai_api', mock_call_openai_api)
+    with patch('pyWeather.chatbot.extract_city_and_date') as mock_extract, \
+            patch('pyWeather.chatbot.generate_weather_info') as mock_weather_info:
+        mock_extract.return_value = ("Seoul", "20231027120000")
+        mock_weather_info.return_value = (20.0, "맑음", "2023-10-27 12:00:00")
+        response = generate_weather_response("오늘 서울 날씨 어때?", conversation_history)
+        assert "오늘 서울은 맑고 기온은 20도입니다." in response
 
-    query = "내일 뉴욕 날씨 어때?"
-    response = generate_weather_response(query)
-    expected_response = '뉴욕의 10월 25일 날씨는 맑음이며, 기온은 20도입니다.'
-    assert response == expected_response
 
-def test_query(monkeypatch):
-    # generate_weather_response 함수를 모의로 설정
-    monkeypatch.setattr('pyWeather.chatbot.generate_weather_response', lambda query: '테스트 날씨 응답입니다.')
+def test_chat_loop(monkeypatch, capsys):
+    inputs = iter([
+        "안녕",
+        "오늘 부산 날씨 알려줘",
+        "내일은 어때?",
+        "exit"
+    ])
 
-    query_text = "내일 뉴욕 날씨 어때?"
-    response = query(query_text)
-    assert response == '테스트 날씨 응답입니다.'
+    def mock_input(prompt):
+        return next(inputs)
+
+    monkeypatch.setattr('builtins.input', mock_input)
+
+    with patch('pyWeather.chatbot.call_openai_api') as mock_call_openai_api, \
+            patch('pyWeather.chatbot.extract_city_and_date') as mock_extract, \
+            patch('pyWeather.chatbot.generate_weather_info') as mock_weather_info:
+        mock_call_openai_api.side_effect = [
+            "안녕하세요! 무엇을 도와드릴까요?",
+            "부산의 2023-10-28 12:00:00 날씨는 맑음이며, 기온은 22.0도입니다. 즐거운 하루 보내세요!",
+            "내일은 좋은 날씨가 예상됩니다.",
+        ]
+        mock_extract.return_value = ("Busan", "20231028120000")
+        mock_weather_info.return_value = (22.0, "맑음", "2023-10-28 12:00:00")
+
+        chat_loop()
+
+    captured = capsys.readouterr()
+    expected_outputs = [
+        "챗봇을 시작합니다. 'exit'을 입력하여 종료할 수 있습니다.",
+        "날씨 정보를 얻기 위해 꼭 %%'날씨'%% 라는 단어를 포함한 질문을 입력하세요.",
+        "ex) '서울 날씨 어때?', '내일 부산 날씨 알려줘'",
+        "응답: 안녕하세요! 무엇을 도와드릴까요?",
+        "응답: 부산의 2023-10-28 12:00:00 날씨는 맑음이며, 기온은 22.0도입니다. 즐거운 하루 보내세요!",
+        "응답: 내일은 좋은 날씨가 예상됩니다.",
+        "챗봇을 종료합니다.",
+    ]
+    for expected_output in expected_outputs:
+        assert expected_output in captured.out
