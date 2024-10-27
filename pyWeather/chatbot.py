@@ -44,13 +44,12 @@ def make_extracting_prompt(query):
     return prompt
 
 
-def call_openai_api(prompt, system_content, max_tokens=150, temperature=0.7):
+def call_openai_api(messages, max_tokens=150, temperature=0.7):
     """
     OpenAI ChatCompletion API를 호출하는 함수.
 
     Args:
-        prompt (str): GPT에 전달할 프롬프트.
-        system_content (str): 시스템 역할의 컨텐츠.
+        messages (list): 대화 메시지의 리스트.
         max_tokens (int, optional): 최대 토큰 수. 기본값은 150.
         temperature (float, optional): 생성 온도. 기본값은 0.7.
 
@@ -60,10 +59,7 @@ def call_openai_api(prompt, system_content, max_tokens=150, temperature=0.7):
     try:
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": prompt}
-            ],
+            messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
         )
@@ -86,11 +82,15 @@ def extract_city_and_date(query):
             - date_str (str): 'YYYYMMDDHHMMSS' 형식의 날짜 문자열.
     """
     prompt = make_extracting_prompt(query)
-    current_time = get_current_datetime()
+    current_time = get_current_datetime().strftime("%Y%m%d%H%M%S")
     system_content = "도시와 날짜 추출"
 
     # OpenAI API 호출
-    output = call_openai_api(prompt, system_content)
+    messages = [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": prompt}
+    ]
+    output = call_openai_api(messages)
 
     if output is None:
         return 'Seoul', current_time
@@ -142,12 +142,13 @@ def generate_weather_info(city, target_date):
     return temp, sky, date_time
 
 
-def generate_weather_response(query):
+def generate_weather_response(query, conversation_history):
     """
     사용자의 질의로부터 날씨 정보를 생성하는 함수.
 
     Args:
         query (str): 사용자의 질의 문장.
+        conversation_history (list): 이전 대화 기록.
 
     Returns:
         str: 사용자를 위한 날씨 정보 응답.
@@ -163,11 +164,21 @@ def generate_weather_response(query):
 
     # 사용자에게 전달할 날씨 정보 생성
     weather_info = f"{city}의 {date_time} 날씨는 {sky}이며, 기온은 {temp}도입니다."
-    prompt = f"사용자에게 다음 정보에 대해 친절하고 자연스럽게 설명해줘:\n\n{weather_info}"
-    system_content = "날씨 정보 생성"
+
+    # 대화 기록을 바탕으로 메시지 생성
+    messages = [
+        {"role": "system", "content": "당신은 사용자에게 날씨 정보를 제공하는 친절한 어시스턴트입니다."},
+    ]
+    # 이전 대화 기록 추가
+    for entry in conversation_history:
+        messages.append({"role": "user", "content": entry["user"]})
+        messages.append({"role": "assistant", "content": entry["bot"]})
+    # 현재 사용자 입력과 날씨 정보를 포함한 메시지 추가
+    user_message = f"{query}\n\n현재 날씨 정보:\n{weather_info}\n\n위의 날씨 정보를 바탕으로 사용자에게 친절하고 자연스러운 답변을 제공해주세요."
+    messages.append({"role": "user", "content": user_message})
 
     # GPT를 사용하여 응답 생성
-    response = call_openai_api(prompt, system_content, max_tokens=200)
+    response = call_openai_api(messages, max_tokens=200)
 
     if response is None:
         return "죄송합니다, 요청을 처리하는 중 오류가 발생했습니다."
@@ -175,14 +186,45 @@ def generate_weather_response(query):
     return response
 
 
-def query(query_text):
+def chat_loop():
     """
-    사용자의 질의에 대해 응답을 생성하는 함수.
-
-    Args:
-        query_text (str): 사용자의 질의 문장.
-
-    Returns:
-        str: 최종 응답 문자열.
+    사용자가 'exit'을 입력할 때까지 반복적으로 질문을 받고 응답하는 함수.
+    사용자의 질문에 '날씨'라는 단어가 들어가면 날씨 정보를 제공하며,
+    그렇지 않은 경우 일반 대화로 처리하고 이전 대화를 기억합니다.
+    날씨 질문에도 이전 대화를 기억하여 응답에 반영합니다.
     """
-    return generate_weather_response(query_text)
+    print("챗봇을 시작합니다. 'exit'을 입력하여 종료할 수 있습니다.")
+    print("날씨 정보를 얻기 위해 꼭 %%'날씨'%% 라는 단어를 포함한 질문을 입력하세요.")
+    print("ex) '서울 날씨 어때?', '내일 부산 날씨 알려줘'")
+
+    # 대화 기록을 저장할 리스트
+    conversation_history = []
+
+    while True:
+        user_input = input("질문을 입력하세요: ")
+
+        if user_input.lower() == "exit":
+            print("챗봇을 종료합니다.")
+            break
+
+        # 사용자의 입력에 '날씨'가 포함되어 있는지 확인
+        if '날씨' in user_input:
+            # generate_weather_response 함수를 사용하여 날씨 정보 응답 생성
+            response = generate_weather_response(user_input, conversation_history)
+        else:
+            # 대화 기록을 바탕으로 메시지 생성
+            messages = [
+                {"role": "system", "content": "당신은 사용자에게 날씨 정보를 제공하는 친절한 어시스턴트입니다."},
+            ]
+            for entry in conversation_history:
+                messages.append({"role": "user", "content": entry["user"]})
+                messages.append({"role": "assistant", "content": entry["bot"]})
+            messages.append({"role": "user", "content": user_input})
+
+            # 자유로운 질문에 대한 응답 생성
+            response = call_openai_api(messages, max_tokens=200)
+
+        print(f"응답: {response}")
+
+        # 현재 대화를 기록에 추가
+        conversation_history.append({"user": user_input, "bot": response})
