@@ -4,8 +4,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="pyWeather",
-    version="0.1.0",
+    name="chatweather",
+    version="0.1.1",
     author="SanghyunPark",
     author_email="hirvahapjh@gmail.com",
     description="A package for weather forecasting and ChatGPT integration",

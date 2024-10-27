@@ -1,8 +1,8 @@
 import json
 import openai
-from config import get_openai_api_key, get_weather_api_key
-from pyWeather.weather import forecast
-from pyWeather.weather_api_datetime import get_current_datetime
+from ..config import get_openai_api_key, get_weather_api_key
+from chatweather.weather import forecast
+from chatweather.weather_api_datetime import get_current_datetime
 
 # OpenAI API 키 설정
 openai.api_key = get_openai_api_key()

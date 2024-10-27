@@ -1,6 +1,6 @@
 import requests
 from datetime import datetime
-from pyWeather.weather_api_datetime import get_current_datetime, set_api_datetime
+from chatweather.weather_api_datetime import get_current_datetime, set_api_datetime
 
 def forecast(params):
     """
