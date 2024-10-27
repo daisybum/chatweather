@@ -1,6 +1,6 @@
 import json
 import openai
-from ..config import get_openai_api_key, get_weather_api_key
+from config import get_openai_api_key, get_weather_api_key
 from chatweather.weather import forecast
 from chatweather.weather_api_datetime import get_current_datetime
 
