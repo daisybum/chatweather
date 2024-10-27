@@ -1,4 +1,4 @@
-from pyWeather import chatgpt
+from pyWeather import chatbot
 
 def main():
     print("날씨 질문 예시: '내일 서울 날씨 어때?', '오늘 부산 날씨는?', '모레 하와이 날씨 어때?'")
