@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from pyWeather.chatbot import (
+from chatweather.chatbot import (
     make_extracting_prompt,
     extract_city_and_date,
     generate_weather_info,
@@ -12,26 +12,26 @@ from datetime import datetime
 
 @pytest.fixture
 def mock_get_current_datetime():
-    with patch('pyWeather.chatbot.get_current_datetime') as mock_datetime:
+    with patch('chatweather.chatbot.get_current_datetime') as mock_datetime:
         mock_datetime.return_value = datetime(2023, 10, 27, 12, 0, 0)
         yield mock_datetime
 
 
 @pytest.fixture
 def mock_call_openai_api():
-    with patch('pyWeather.chatbot.call_openai_api') as mock_api:
+    with patch('chatweather.chatbot.call_openai_api') as mock_api:
         yield mock_api
 
 
 @pytest.fixture
 def mock_forecast():
-    with patch('pyWeather.chatbot.forecast') as mock_forecast:
+    with patch('chatweather.chatbot.forecast') as mock_forecast:
         yield mock_forecast
 
 
 def test_make_extracting_prompt():
     query = "오늘 서울 날씨 어때?"
-    prompt = make_extracting_prompt(query)
+    prompt = make_extracting_prompt(query, current_time="2023-10-27 12:00:00")
     assert "사용자의 질의에서 도시(영어명)와 날짜를 추출해주세요." in prompt
     assert f'질의: "{query}"' in prompt
 
@@ -55,8 +55,8 @@ def test_generate_weather_response(mock_call_openai_api):
     conversation_history = []
     mock_call_openai_api.return_value = "오늘 서울은 맑고 기온은 20도입니다. 즐거운 하루 보내세요!"
 
-    with patch('pyWeather.chatbot.extract_city_and_date') as mock_extract, \
-            patch('pyWeather.chatbot.generate_weather_info') as mock_weather_info:
+    with patch('chatweather.chatbot.extract_city_and_date') as mock_extract, \
+            patch('chatweather.chatbot.generate_weather_info') as mock_weather_info:
         mock_extract.return_value = ("Seoul", "20231027120000")
         mock_weather_info.return_value = (20.0, "맑음", "2023-10-27 12:00:00")
         response = generate_weather_response("오늘 서울 날씨 어때?", conversation_history)
@@ -76,9 +76,9 @@ def test_chat_loop(monkeypatch, capsys):
 
     monkeypatch.setattr('builtins.input', mock_input)
 
-    with patch('pyWeather.chatbot.call_openai_api') as mock_call_openai_api, \
-            patch('pyWeather.chatbot.extract_city_and_date') as mock_extract, \
-            patch('pyWeather.chatbot.generate_weather_info') as mock_weather_info:
+    with patch('chatweather.chatbot.call_openai_api') as mock_call_openai_api, \
+            patch('chatweather.chatbot.extract_city_and_date') as mock_extract, \
+            patch('chatweather.chatbot.generate_weather_info') as mock_weather_info:
         mock_call_openai_api.side_effect = [
             "안녕하세요! 무엇을 도와드릴까요?",
             "부산의 2023-10-28 12:00:00 날씨는 맑음이며, 기온은 22.0도입니다. 즐거운 하루 보내세요!",

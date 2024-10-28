@@ -4,12 +4,10 @@ from datetime import datetime, timedelta
 
 import requests
 
-from pyWeather.weather import (
+from chatweather.weather import (
     forecast,
     fetch_current_weather,
-    fetch_forecast_weather,
-    get_current_datetime,
-    set_api_datetime,
+    fetch_forecast_weather
 )
 
 # 성공적인 현재 날씨 조회 테스트
@@ -30,8 +28,8 @@ def test_current_weather_success():
     mock_response.status_code = 200
     mock_response.raise_for_status = Mock()
 
-    with patch('pyWeather.weather.requests.get', return_value=mock_response):
-        with patch('pyWeather.weather.get_current_datetime', return_value=fixed_now):
+    with patch('chatweather.weather.requests.get', return_value=mock_response):
+        with patch('chatweather.weather.get_current_datetime', return_value=fixed_now):
             temp, sky, dt = forecast(params)
 
             assert temp == 20
@@ -62,8 +60,8 @@ def test_forecast_weather_success():
     mock_response.status_code = 200
     mock_response.raise_for_status = Mock()
 
-    with patch('pyWeather.weather.requests.get', return_value=mock_response):
-        with patch('pyWeather.weather.set_api_datetime', return_value=target_date):
+    with patch('chatweather.weather.requests.get', return_value=mock_response):
+        with patch('chatweather.weather.set_api_datetime', return_value=target_date):
             temp, sky, dt = forecast(params)
 
             assert temp == 15
@@ -123,7 +121,7 @@ def test_forecast_invalid_city_name(capsys):
     mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError()
     mock_response.reason = 'Not Found'
 
-    with patch('pyWeather.weather.requests.get', return_value=mock_response):
+    with patch('chatweather.weather.requests.get', return_value=mock_response):
         temp, sky, dt = forecast(params)
         captured = capsys.readouterr()
         assert "Error: 도시 'InvalidCity'를 찾을 수 없습니다." in captured.out
@@ -144,7 +142,7 @@ def test_forecast_invalid_api_key(capsys):
     mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError()
     mock_response.reason = 'Unauthorized'
 
-    with patch('pyWeather.weather.requests.get', return_value=mock_response):
+    with patch('chatweather.weather.requests.get', return_value=mock_response):
         temp, sky, dt = forecast(params)
         captured = capsys.readouterr()
         assert "Error: 잘못된 API 키입니다." in captured.out
@@ -169,8 +167,8 @@ def test_fetch_current_weather():
     mock_response.status_code = 200
     mock_response.raise_for_status = Mock()
 
-    with patch('pyWeather.weather.requests.get', return_value=mock_response):
-        with patch('pyWeather.weather.get_current_datetime', return_value=fixed_now):
+    with patch('chatweather.weather.requests.get', return_value=mock_response):
+        with patch('chatweather.weather.get_current_datetime', return_value=fixed_now):
             temp, sky, dt = fetch_current_weather(city, api_key, lang, units)
             assert temp == 20
             assert sky == '맑음'
@@ -198,7 +196,7 @@ def test_fetch_forecast_weather():
     mock_response.status_code = 200
     mock_response.raise_for_status = Mock()
 
-    with patch('pyWeather.weather.requests.get', return_value=mock_response):
+    with patch('chatweather.weather.requests.get', return_value=mock_response):
         temp, sky, dt = fetch_forecast_weather(city, api_key, lang, units, target_date)
         assert temp == 15
         assert sky == '구름 조금'
@@ -228,8 +226,8 @@ def test_forecast_no_matching_forecast(capsys):
     mock_response.status_code = 200
     mock_response.raise_for_status = Mock()
 
-    with patch('pyWeather.weather.requests.get', return_value=mock_response):
-        with patch('pyWeather.weather.set_api_datetime', return_value=target_date):
+    with patch('chatweather.weather.requests.get', return_value=mock_response):
+        with patch('chatweather.weather.set_api_datetime', return_value=target_date):
             temp, sky, dt = forecast(params)
             captured = capsys.readouterr()
             assert "지정된 날짜와 시간에 대한 예보를 찾을 수 없습니다." in captured.out

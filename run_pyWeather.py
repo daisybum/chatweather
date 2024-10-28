@@ -1,4 +1,4 @@
-from pyWeather import chatbot
+from chatweather import chatbot
 
 def main():
     chatbot.chat_loop()

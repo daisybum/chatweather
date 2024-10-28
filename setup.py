@@ -4,8 +4,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="pyWeather",
-    version="0.1.0",
+    name="chatweather",
+    version="0.1.9",
     author="SanghyunPark",
     author_email="hirvahapjh@gmail.com",
     description="A package for weather forecasting and ChatGPT integration",
@@ -13,10 +13,12 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/daisybum/pyWeather",
     packages=find_packages(),
+    include_package_data=True,
+    package_data={'chatweather': ['config.py', 'config.yaml']},
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: Apache-2.0 License",
+        "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
@@ -26,7 +28,7 @@ setup(
     install_requires=[
         "requests",
         "xmltodict",
-        "openai",
-        "pytest"
+        "openai==1.52.2",
+        "pytest==8.3.3"
     ],
 )

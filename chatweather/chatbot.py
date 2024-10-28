@@ -1,14 +1,14 @@
 import json
 import openai
-from config import get_openai_api_key, get_weather_api_key
-from pyWeather.weather import forecast
-from pyWeather.weather_api_datetime import get_current_datetime
+from chatweather.config import get_openai_api_key, get_weather_api_key
+from chatweather.weather import forecast
+from chatweather.weather_api_datetime import get_current_datetime
 
 # OpenAI API 키 설정
 openai.api_key = get_openai_api_key()
 
 
-def make_extracting_prompt(query):
+def make_extracting_prompt(query, current_time):
     """
     사용자 질의에서 도시와 날짜를 추출하기 위한 프롬프트를 생성합니다.
 
@@ -18,7 +18,6 @@ def make_extracting_prompt(query):
     Returns:
         str: GPT에 전달할 프롬프트 문자열.
     """
-    current_time = get_current_datetime()
     prompt = f"""
 사용자의 질의에서 도시(영어명)와 날짜를 추출해주세요. 현재 시간은 {current_time}입니다.
 
@@ -32,8 +31,8 @@ def make_extracting_prompt(query):
 주의 사항:
 - 질의의 띄어쓰기, 맞춤법, 오탈자를 먼저 수정하세요.
 - 도시 이름의 각 단어 첫 글자를 대문자로 변환하세요.
-- 날짜의 시간이 특정되지 않았다면 12시 정각으로 설정하세요. 날짜가 언급되지 않았다면 현재 날짜를 사용하세요.
-- 오늘의 날씨에 대한 질의이면서, 특정 시간을 언급하지 않는 경우 현재 시간을 사용하세요.
+- 특정 일의(오늘, 내일, 모레) 시간이 특정되지 않았다면 12시 정각으로 설정하세요. 특정 일이(오늘, 내일, 모레) 언급되지 않았다면 현재 날짜를 사용하세요.
+- 오늘의 날씨에 대한 질의이고, 특정 시간을 언급하지 않는 경우 현재 시간을 사용하세요.
 
 결과 예시:
 {{
@@ -81,8 +80,9 @@ def extract_city_and_date(query):
             - city (str): 추출된 도시 이름 (영어).
             - date_str (str): 'YYYYMMDDHHMMSS' 형식의 날짜 문자열.
     """
-    prompt = make_extracting_prompt(query)
     current_time = get_current_datetime().strftime("%Y%m%d%H%M%S")
+    prompt = make_extracting_prompt(query, current_time)
+
     system_content = "도시와 날짜 추출"
 
     # OpenAI API 호출
