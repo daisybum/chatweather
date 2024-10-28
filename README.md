@@ -15,7 +15,7 @@ ChatWeather는 OpenAI의 GPT 모델과 OpenWeatherMap API를 통합하여 사용
 - **다국어 지원**: 한국어를 비롯한 여러 언어로 날씨 정보를 제공합니다.
 - **오류 처리**: 잘못된 입력이나 예외 상황에 대한 견고한 오류 처리를 제공합니다.
 
-## 설치 방법
+## 설치하기
 
 ### 요구 사항
 
@@ -47,7 +47,7 @@ your_openai_api_key와 your_openweathermap_api_key를 실제 발급받은 API �
 
 `your_openai_api_key`와 `your_openweathermap_api_key`를 실제 발급받은 API 키로 대체하세요.
 
-## 사용 방법
+## 사용하기
 
 ### 챗봇 실행
 
