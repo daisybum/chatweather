@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="chatweather",
-    version="0.1.3",
+    version="0.1.9",
     author="SanghyunPark",
     author_email="hirvahapjh@gmail.com",
     description="A package for weather forecasting and ChatGPT integration",
@@ -14,7 +14,7 @@ setup(
     url="https://github.com/daisybum/pyWeather",
     packages=find_packages(),
     include_package_data=True,
-    package_data={'': ['config.py', 'config.yaml']},
+    package_data={'chatweather': ['config.py', 'config.yaml']},
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -28,7 +28,7 @@ setup(
     install_requires=[
         "requests",
         "xmltodict",
-        "openai",
-        "pytest"
+        "openai==1.52.2",
+        "pytest==8.3.3"
     ],
 )
