@@ -108,6 +108,22 @@ python -m chatweather.chatbot
 pytest
 ```
 
+## 배포
+
+패키지를 배포하기 위해 다음 명령어를 실행하세요.
+
+1. 패키지 빌드
+
+   ```bash
+   python setup.py sdist bdist_wheel
+    ```
+2. PyPI에 업로드
+
+   ```bash
+   python -m twine upload dist/*
+   ```
+
+
 ## 종속성
 
 - `requests`
