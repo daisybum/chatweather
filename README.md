@@ -2,7 +2,7 @@
 
 ChatWeather는 OpenAI의 GPT 모델과 OpenWeatherMap API를 통합하여 사용자에게 날씨 정보를 제공하는 챗봇 애플리케이션입니다. 자연어로 된 사용자의 질문을 이해하고, 해당하는 도시와 날짜의 날씨 정보를 친절하게 응답합니다.
 
-## 소개
+## 목적 및 소개
 
 - **자연어 처리**: 사용자의 질문에서 도시와 날짜를 추출하여 정확한 날씨 정보를 제공합니다.
 - **날씨 정보 제공**: 현재 날씨 및 예보 데이터를 OpenWeatherMap API를 통해 받아옵니다.
@@ -15,7 +15,7 @@ ChatWeather는 OpenAI의 GPT 모델과 OpenWeatherMap API를 통합하여 사용
 - **다국어 지원**: 한국어를 비롯한 여러 언어로 날씨 정보를 제공합니다.
 - **오류 처리**: 잘못된 입력이나 예외 상황에 대한 견고한 오류 처리를 제공합니다.
 
-## 설치 방법
+## 설치하기
 
 ### 요구 사항
 
@@ -47,7 +47,7 @@ your_openai_api_key와 your_openweathermap_api_key를 실제 발급받은 API �
 
 `your_openai_api_key`와 `your_openweathermap_api_key`를 실제 발급받은 API 키로 대체하세요.
 
-## 사용 방법
+## 사용하기
 
 ### 챗봇 실행
 
@@ -100,13 +100,29 @@ python -m chatweather.chatbot
 - `generate_weather_response(query, conversation_history)`: 사용자에게 응답할 메시지를 생성합니다.
 - `chat_loop()`: 사용자와의 대화 루프를 실행합니다.
 
-## 테스트
+## 테스트하기
 
 `pytest`를 사용하여 작성된 테스트 코드를 실행하여 각 모듈의 기능을 검증할 수 있습니다.
 
 ```bash
 pytest
 ```
+
+## 패키지 만들기 및 배포
+
+패키지를 배포하기 위해 다음 명령어를 실행하세요.
+
+1. 패키지 만들기
+
+   ```bash
+   python setup.py sdist bdist_wheel
+    ```
+2. PyPI에 업로드
+
+   ```bash
+   python -m twine upload dist/*
+   ```
+
 
 ## 종속성
 
