@@ -7,9 +7,7 @@ import requests
 from chatweather.weather import (
     forecast,
     fetch_current_weather,
-    fetch_forecast_weather,
-    get_current_datetime,
-    set_api_datetime,
+    fetch_forecast_weather
 )
 
 # 성공적인 현재 날씨 조회 테스트
