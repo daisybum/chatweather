@@ -31,7 +31,7 @@ def mock_forecast():
 
 def test_make_extracting_prompt():
     query = "오늘 서울 날씨 어때?"
-    prompt = make_extracting_prompt(query)
+    prompt = make_extracting_prompt(query, current_time="2023-10-27 12:00:00")
     assert "사용자의 질의에서 도시(영어명)와 날짜를 추출해주세요." in prompt
     assert f'질의: "{query}"' in prompt
 
